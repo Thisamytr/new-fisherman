@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MaluMarket — Local Fish, Straight From the Shore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --navy:#0A2E3D;
+  --navy-2:#0E3E52;
+  --teal:#147A87;
+  --teal-light:#1E96A6;
+  --bg:#EAF3F1;
+  --card:#FFFFFF;
+  --sand:#D9CBB5;
+  --sand-dark:#B99F79;
+  --accent:#E8622C;
+  --accent-dark:#C94E1D;
+  --ink:#0A2E3D;
+  --muted:#5B7A81;
+  --line:#D3E3E0;
+  --danger:#C0392B;
+  --success:#1F8A55;
+  --warning:#B8860B;
+  --radius:14px;
+  --shadow: 0 6px 24px rgba(10,46,61,0.10);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{
+  font-family:'Fraunces',serif;
+  margin:0 0 .4em 0;
+  color:var(--navy);
+  font-weight:700;
+  letter-spacing:-0.01em;
+}
+.mono, .price, .qty-input, .tag-num{font-family:'JetBrains Mono',monospace;}
+a{color:inherit;}
+button{font-family:inherit;}
+::selection{background:var(--accent);color:#fff;}
+
+/* ---------- layout shells ---------- */
+#app{min-height:100vh;display:flex;flex-direction:column;}
+.container{max-width:1180px;margin:0 auto;padding:0 20px;}
+
+/* ---------- topbar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  background:var(--navy);
+  border-bottom:3px solid var(--accent);
+}
+.topbar .container{display:flex;align-items:center;justify-content:space-between;height:64px;}
+.brand{display:flex;align-items:center;gap:10px;cursor:pointer;color:#fff;font-family:'Fraunces',serif;font-weight:700;font-size:1.3rem;}
+.brand .wave{width:30px;height:30px;flex:none;}
+.navlinks{display:flex;align-items:center;gap:4px;}
+.navlinks a, .navlinks button.navlink{
+  color:#DCECEC;background:none;border:none;cursor:pointer;
+  padding:9px 14px;border-radius:8px;font-size:.92rem;font-weight:500;
+  text-decoration:none;display:flex;align-items:center;gap:6px;
+}
+.navlinks a:hover, .navlinks button.navlink:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.navlinks a.active{background:rgba(232,98,44,0.22);color:#fff;}
+.badge{
+  background:var(--accent);color:#fff;font-size:.68rem;font-weight:700;
+  min-width:17px;height:17px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;
+}
+.navlinks .role-pill{
+  background:var(--teal);color:#fff;font-size:.72rem;font-weight:700;
+  padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;margin-right:6px;
+}
+.hamburger{display:none;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;}
+
+/* ---------- footer ---------- */
+.site-footer{
+  margin-top:auto;background:var(--navy);color:#B7CBD1;padding:34px 0 20px;
+  font-size:.85rem;
+}
+.tide-divider{width:100%;height:26px;display:block;}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 20px;border-radius:9px;border:none;cursor:pointer;
+  font-weight:600;font-size:.92rem;transition:transform .08s ease, box-shadow .15s ease;
+}
+.btn:active{transform:translateY(1px);}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent-dark);}
+.btn-outline{background:transparent;border:1.5px solid var(--teal);color:var(--teal);}
+.btn-outline:hover{background:var(--teal);color:#fff;}
+.btn-navy{background:var(--navy);color:#fff;}
+.btn-navy:hover{background:var(--navy-2);}
+.btn-ghost{background:transparent;color:var(--muted);}
+.btn-ghost:hover{background:#e2eeec;}
+.btn-danger{background:#fff;border:1.5px solid var(--danger);color:var(--danger);}
+.btn-danger:hover{background:var(--danger);color:#fff;}
+.btn-success{background:var(--success);color:#fff;}
+.btn-success:hover{background:#166a41;}
+.btn-sm{padding:7px 12px;font-size:.8rem;border-radius:7px;}
+.btn-block{width:100%;}
+.btn[disabled]{opacity:.5;cursor:not-allowed;}
+
+/* ---------- form controls ---------- */
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:.82rem;font-weight:600;color:var(--navy);margin-bottom:6px;}
+.field .hint{font-size:.76rem;color:var(--muted);margin-top:4px;}
+input[type=text],input[type=password],input[type=number],input[type=tel],input[type=search],select,textarea{
+  width:100%;padding:11px 13px;border-radius:9px;border:1.5px solid var(--line);
+  background:#fff;font-size:.92rem;color:var(--ink);font-family:inherit;
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--teal-light);outline-offset:1px;border-color:var(--teal);}
+textarea{resize:vertical;min-height:70px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.chip-group{display:flex;flex-wrap:wrap;gap:8px;}
+.chip-check{
+  border:1.5px solid var(--line);border-radius:20px;padding:7px 13px;font-size:.82rem;cursor:pointer;
+  user-select:none;background:#fff;font-weight:500;color:var(--muted);
+}
+.chip-check.on{background:var(--teal);border-color:var(--teal);color:#fff;}
+
+/* ---------- cards / surfaces ---------- */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;}
+.auth-wrap{max-width:460px;margin:48px auto;padding:0 16px;}
+.tabs{display:flex;border-radius:10px;background:#dfeceb;padding:4px;margin-bottom:22px;}
+.tabs button{flex:1;border:none;background:none;padding:10px;border-radius:8px;font-weight:600;cursor:pointer;color:var(--muted);}
+.tabs button.active{background:#fff;color:var(--navy);box-shadow:0 2px 6px rgba(0,0,0,0.08);}
+
+/* ---------- hero ---------- */
+.hero{background:linear-gradient(160deg,var(--navy) 0%,var(--navy-2) 60%, var(--teal) 130%);color:#fff;padding:74px 0 90px;position:relative;overflow:hidden;}
+.hero .container{position:relative;z-index:2;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;}
+.hero h1{color:#fff;font-size:2.9rem;line-height:1.08;max-width:560px;}
+.hero p.lede{color:#CFE4E2;font-size:1.08rem;max-width:480px;margin:16px 0 26px;}
+.hero .cta-row{display:flex;gap:12px;flex-wrap:wrap;}
+.hero-stat{display:flex;gap:26px;margin-top:34px;}
+.hero-stat div b{display:block;font-family:'Fraunces',serif;font-size:1.5rem;}
+.hero-stat div span{font-size:.78rem;color:#AFCFCB;}
+.hero-visual{position:relative;}
+.ticket{
+  background:#fff;color:var(--ink);border-radius:12px;padding:18px 20px;box-shadow:0 20px 50px rgba(0,0,0,.35);
+  transform:rotate(-2deg);
+}
+.ticket + .ticket{transform:rotate(2deg);margin-top:-14px;margin-left:40px;}
+.ticket .tt-top{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px dashed var(--line);padding-bottom:8px;margin-bottom:8px;}
+.ticket .tt-top b{font-family:'Fraunces',serif;font-size:1.05rem;}
+.ticket .tt-price{font-family:'JetBrains Mono',monospace;color:var(--accent-dark);font-weight:700;}
+.ticket small{color:var(--muted);}
+
+section.strip{padding:56px 0;}
+.section-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+.eyebrow{font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-weight:700;}
+
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+.how-card{background:#fff;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);}
+.how-card .step-tag{font-family:'JetBrains Mono';color:var(--sand-dark);font-size:.78rem;font-weight:700;}
+
+/* ---------- app shell (logged in) ---------- */
+.app-body{flex:1;padding:26px 0 50px;}
+.dash-grid{display:grid;grid-template-columns:230px 1fr;gap:22px;align-items:start;}
+.side-nav{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;position:sticky;top:80px;}
+.side-nav button{
+  width:100%;text-align:left;background:none;border:none;padding:11px 13px;border-radius:9px;
+  font-size:.88rem;font-weight:600;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:9px;margin-bottom:2px;
+}
+.side-nav button:hover{background:#eef6f5;}
+.side-nav button.active{background:var(--teal);color:#fff;}
+.side-nav .badge{margin-left:auto;}
+
+/* ---------- marketplace ---------- */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;background:#fff;padding:14px;border-radius:var(--radius);box-shadow:var(--shadow);align-items:center;}
+.filter-bar input[type=search]{flex:1;min-width:160px;}
+.filter-bar select{width:auto;min-width:130px;}
+.location-banner{
+  background:#fff2e9;border:1px solid #f3c9a8;color:var(--accent-dark);padding:10px 14px;border-radius:10px;
+  font-size:.85rem;margin-bottom:16px;display:flex;gap:8px;align-items:center;
+}
+.fish-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;}
+.fish-card{
+  background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
+  border-top:4px solid var(--sand);position:relative;
+}
+.fish-card.unavailable{opacity:.55;}
+.fish-thumb{
+  height:150px;background:linear-gradient(135deg,#DDEEEC,#C7E3E0);display:flex;align-items:center;justify-content:center;font-size:2.6rem;
+  position:relative;
+}
+.fish-thumb img{width:100%;height:100%;object-fit:cover;}
+.cat-flag{
+  position:absolute;top:10px;left:0;background:var(--navy);color:#fff;font-size:.68rem;font-weight:700;
+  padding:4px 10px 4px 8px;border-radius:0 20px 20px 0;text-transform:uppercase;letter-spacing:.03em;
+}
+.fish-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;}
+.fish-body h4{font-size:1.05rem;margin:0;}
+.fish-meta{font-size:.78rem;color:var(--muted);display:flex;justify-content:space-between;}
+.fish-price{font-size:1.15rem;color:var(--accent-dark);font-weight:700;}
+.fish-price span{font-size:.72rem;color:var(--muted);font-weight:500;}
+.fish-seller{font-size:.78rem;color:var(--teal);font-weight:600;}
+.fish-actions{display:flex;gap:8px;margin-top:8px;}
+.fish-actions .btn{flex:1;}
+.stock-tag{font-size:.72rem;color:var(--muted);}
+.stock-tag.low{color:var(--warning);font-weight:600;}
+.stock-tag.out{color:var(--danger);font-weight:600;}
+
+/* ---------- cart ---------- */
+.cart-line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);gap:10px;}
+.cart-line:last-child{border-bottom:none;}
+.cart-line .ci-name{font-weight:600;}
+.cart-line .ci-seller{font-size:.76rem;color:var(--teal);}
+.qty-input{width:70px;padding:6px 8px;border-radius:7px;border:1.5px solid var(--line);text-align:center;}
+.seller-group{margin-bottom:18px;padding-bottom:12px;border-bottom:2px dashed var(--line);}
+.seller-group:last-of-type{border-bottom:none;}
+.seller-group h4{font-size:.95rem;color:var(--teal);margin-bottom:4px;}
+.total-row{display:flex;justify-content:space-between;font-size:1.15rem;font-weight:700;padding-top:14px;border-top:2px solid var(--navy);margin-top:8px;}
+
+/* ---------- orders ---------- */
+.order-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:14px;}
+.order-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;}
+.status-pill{padding:5px 12px;border-radius:20px;font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+.st-pending{background:#FDF0DA;color:var(--warning);}
+.st-negotiating{background:#E4EEFB;color:#2A5DAB;}
+.st-accepted{background:#E1F3E9;color:var(--success);}
+.st-rejected{background:#FBE4E1;color:var(--danger);}
+.st-preparing{background:#EFE7FB;color:#6A3FBF;}
+.st-out{background:#DFF3F1;color:var(--teal);}
+.st-delivered{background:#DFF6E6;color:#166a41;}
+.st-cancelled{background:#F1F1F1;color:#777;}
+.order-items{margin:10px 0;font-size:.88rem;}
+.order-items div{display:flex;justify-content:space-between;padding:3px 0;}
+.status-track{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+
+/* ---------- messages ---------- */
+.msg-layout{display:grid;grid-template-columns:260px 1fr;gap:16px;min-height:420px;}
+.conv-list{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.conv-item{padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;}
+.conv-item:hover{background:#f3f9f8;}
+.conv-item.active{background:#e5f2f0;border-left:3px solid var(--teal);}
+.conv-item .cv-name{font-weight:600;font-size:.9rem;}
+.conv-item .cv-snip{font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chat-pane{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;}
+.chat-head{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;}
+.chat-body{flex:1;padding:16px 18px;overflow-y:auto;max-height:420px;display:flex;flex-direction:column;gap:10px;}
+.bubble{max-width:70%;padding:10px 13px;border-radius:12px;font-size:.87rem;}
+.bubble.me{align-self:flex-end;background:var(--teal);color:#fff;border-bottom-right-radius:3px;}
+.bubble.them{align-self:flex-start;background:#eef3f2;color:var(--ink);border-bottom-left-radius:3px;}
+.bubble.offer{align-self:flex-start;background:#fff6ea;border:1px dashed var(--warning);color:var(--navy);}
+.bubble.offer.me{align-self:flex-end;background:#fff6ea;border:1px dashed var(--warning);}
+.bubble .offer-actions{display:flex;gap:6px;margin-top:8px;}
+.chat-input{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line);}
+.chat-input input{flex:1;}
+.empty-state{padding:40px 20px;text-align:center;color:var(--muted);}
+.empty-state .ico{font-size:2.2rem;margin-bottom:10px;}
+
+/* ---------- listings mgmt ---------- */
+.listing-row{display:flex;gap:14px;align-items:center;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px;}
+.listing-row img,.listing-row .ph{width:64px;height:64px;border-radius:9px;object-fit:cover;background:#e3efed;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex:none;}
+.listing-row .lr-info{flex:1;min-width:0;}
+.listing-row .lr-info h4{margin:0;font-size:.98rem;}
+.listing-row .lr-meta{font-size:.78rem;color:var(--muted);}
+.listing-row .lr-actions{display:flex;gap:6px;flex-wrap:wrap;}
+
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(10,30,40,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.modal{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;padding:24px;}
+.modal .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.modal .modal-head button{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);}
+
+#mapPicker{height:220px;border-radius:10px;margin-top:8px;z-index:1;}
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--navy);color:#fff;padding:12px 18px;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:.88rem;animation:slidein .25s ease;}
+.toast.err{background:var(--danger);}
+.toast.ok{background:var(--success);}
+@keyframes slidein{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+.empty-hero{text-align:center;padding:60px 20px;color:var(--muted);}
+
+@media (max-width: 880px){
+  .hero .container{grid-template-columns:1fr;}
+  .hero-visual{display:none;}
+  .how-grid{grid-template-columns:repeat(2,1fr);}
+  .dash-grid{grid-template-columns:1fr;}
+  .side-nav{position:static;display:flex;overflow-x:auto;gap:4px;}
+  .side-nav button{white-space:nowrap;}
+  .msg-layout{grid-template-columns:1fr;}
+  .navlinks{
+    position:fixed;top:64px;left:0;right:0;background:var(--navy);flex-direction:column;align-items:stretch;
+    padding:10px;display:none;box-shadow:0 8px 20px rgba(0,0,0,.2);
+  }
+  .navlinks.open{display:flex;}
+  .hamburger{display:block;}
+  .row2{grid-template-columns:1fr;}
+}
+@media (max-width:520px){
+  .hero h1{font-size:2.1rem;}
+  .how-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ============================================================
+   MaluMarket — front-end only fish marketplace
+   Persistence: localStorage (no backend). See README notes
+   printed at bottom of file for production hardening notes.
+   ============================================================ */
+
+const DISTRICTS = ["Colombo","Gampaha","Kalutara","Kandy","Matale","Nuwara Eliya","Galle","Matara",
+"Hambantota","Jaffna","Kilinochchi","Mannar","Vavuniya","Mullaitivu","Batticaloa","Ampara",
+"Trincomalee","Kurunegala","Puttalam","Anuradhapura","Polonnaruwa","Badulla","Monaragala","Ratnapura","Kegalle"];
+
+const CATEGORIES = ["Sea Fish","Freshwater Fish","Prawns & Shellfish","Crab","Dried Fish","Other"];
+const FISH_EMOJI = {"Sea Fish":"🐟","Freshwater Fish":"🐠","Prawns & Shellfish":"🦐","Crab":"🦀","Dried Fish":"🐡","Other":"🎣"};
+
+const STATUS_FLOW = ["Pending","Negotiating","Accepted","Preparing","Out for Delivery","Delivered"];
+const STATUS_CLASS = {"Pending":"st-pending","Negotiating":"st-negotiating","Accepted":"st-accepted",
+  "Rejected":"st-rejected","Preparing":"st-preparing","Out for Delivery":"st-out","Delivered":"st-delivered","Cancelled":"st-cancelled"};
+
+/* ---------------- tiny "DB" over localStorage ---------------- */
+const DB = {
+  read(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
+  write(key, val){ localStorage.setItem(key, JSON.stringify(val)); },
+  users(){ return this.read('mm_users', []); },
+  saveUsers(u){ this.write('mm_users', u); },
+  listings(){ return this.read('mm_listings', []); },
+  saveListings(l){ this.write('mm_listings', l); },
+  orders(){ return this.read('mm_orders', []); },
+  saveOrders(o){ this.write('mm_orders', o); },
+  convos(){ return this.read('mm_convos', []); },
+  saveConvos(c){ this.write('mm_convos', c); },
+  session(){ return this.read('mm_session', null); },
+  saveSession(s){ this.write('mm_session', s); },
+};
+
+function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4); }
+
+// NOT real cryptographic hashing -- this is a client-only demo with no server,
+// so true secure auth (bcrypt/argon2 + server sessions) isn't possible here.
+// This obfuscates the password from being stored in plain sight in localStorage,
+// nothing more. A production build MUST move auth to a real backend.
+function obfuscate(pw){
+  let h = 0;
+  for(let i=0;i<pw.length;i++){ h = (Math.imul(31,h) + pw.charCodeAt(i)) | 0; }
+  return 'x'+Math.abs(h).toString(36)+ '_' + btoa(unescape(encodeURIComponent(pw))).split('').reverse().join('');
+}
+
+function toast(msg, type){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' '+type : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 3200);
+}
+
+function fmtMoney(n){ return 'Rs. ' + Number(n).toLocaleString('en-LK', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function esc(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- seed demo data on first run ---------------- */
+function seedIfEmpty(){
+  if(DB.users().length) return;
+  const users = [
+    {id:'u_seller1', role:'seller', username:'kamal_fisher', passwordHash:obfuscate('demo123'),
+     name:'Kamal Perera', phone:'077 111 2233', district:'Negombo'.length?'Gampaha':'Gampaha', region:'Negombo',
+     address:'Fish Market Road, Negombo', lat:7.2086, lng:79.8358,
+     operatingArea:'Negombo', deliveryAreas:['Gampaha','Colombo'], bio:'Third-generation fisherman, daily morning catch.'},
+    {id:'u_seller2', role:'seller', username:'nimal_seafood', passwordHash:obfuscate('demo123'),
+     name:'Nimal Silva', phone:'071 222 3344', district:'Colombo', region:'Mattakkuliya',
+     address:'Harbour Lane, Colombo 15', lat:6.9647, lng:79.8580,
+     operatingArea:'Colombo', deliveryAreas:['Colombo','Gampaha','Kalutara'], bio:'Wholesale + retail, prawns a specialty.'},
+    {id:'u_customer1', role:'customer', username:'thisam', passwordHash:obfuscate('demo123'),
+     name:'Thisam', phone:'076 555 1212', district:'Gampaha', region:'Ja-Ela',
+     address:'No 12, Lake Road, Ja-Ela', lat:7.0744, lng:79.8917 },
+  ];
+  DB.saveUsers(users);
+
+  const listings = [
+    {id:'l1', sellerId:'u_seller1', name:'Fresh Tuna', category:'Sea Fish', image:'', description:'Line-caught yellowfin, iced same morning.',
+     quantity:50, price:1800, district:'Gampaha', deliveryAreas:['Gampaha','Colombo'], available:true},
+    {id:'l2', sellerId:'u_seller1', name:'Sardines (Salaya)', category:'Sea Fish', image:'', description:'Small local sardines, great for curry.',
+     quantity:80, price:450, district:'Gampaha', deliveryAreas:['Gampaha','Colombo'], available:true},
+    {id:'l3', sellerId:'u_seller2', name:'Tiger Prawns', category:'Prawns & Shellfish', image:'', description:'Large tiger prawns, farm-fresh, cleaned on request.',
+     quantity:20, price:3200, district:'Colombo', deliveryAreas:['Colombo','Gampaha','Kalutara'], available:true},
+    {id:'l4', sellerId:'u_seller2', name:'Mud Crab', category:'Crab', image:'', description:'Live mud crab, sold by weight.',
+     quantity:12, price:2600, district:'Colombo', deliveryAreas:['Colombo','Gampaha','Kalutara'], available:true},
+    {id:'l5', sellerId:'u_seller1', name:'Mackerel (Kumbalawa)', category:'Sea Fish', image:'', description:'Firm-fleshed, good for grilling.',
+     quantity:3, price:900, district:'Gampaha', deliveryAreas:['Gampaha','Colombo'], available:true},
+  ];
+  DB.saveListings(listings);
+  DB.saveOrders([]);
+  DB.saveConvos([]);
+}
+seedIfEmpty();
+
+/* ---------------- app state ---------------- */
+const State = { cart: DB.read('mm_cart', []), activeConvo:null, mapObj:null, mapMarker:null };
+function saveCart(){ DB.write('mm_cart', State.cart); }
+
+function currentUser(){
+  const s = DB.session();
+  if(!s) return null;
+  return DB.users().find(u=>u.id===s.userId) || null;
+}
+function requireGuard(route){
+  const u = currentUser();
+  if(route.startsWith('/customer') && (!u || u.role!=='customer')) return '/login';
+  if(route.startsWith('/seller') && (!u || u.role!=='seller')) return '/login';
+  return null;
+}
+
+/* ---------------- router ---------------- */
+window.addEventListener('hashchange', render);
+window.addEventListener('DOMContentLoaded', render);
+
+function navigate(path){ location.hash = '#'+path; }
+
+function render(){
+  let path = (location.hash || '#/').slice(1);
+  if(path==='') path='/';
+  const redirect = requireGuard(path);
+  if(redirect){ location.hash = '#'+redirect; return; }
+  const u = currentUser();
+  if(u && (path==='/' || path==='/login' || path==='/register')){
+    path = u.role==='customer' ? '/customer/market' : '/seller/listings';
+    history.replaceState(null,'','#'+path);
+  }
+  document.getElementById('app').innerHTML = layout(path, u);
+  routeContent(path, u);
+  wireGlobalUI();
+}
+
+function routeContent(path, u){
+  const main = document.getElementById('mainSlot');
+  if(!main) return;
+  if(path==='/') main.innerHTML = viewLanding();
+  else if(path==='/login') main.innerHTML = viewAuth('login');
+  else if(path==='/register') main.innerHTML = viewAuth('register');
+  else if(path==='/customer/market') main.innerHTML = viewMarket(u);
+  else if(path==='/customer/cart') main.innerHTML = viewCart(u);
+  else if(path==='/customer/orders') main.innerHTML = viewOrders(u,'customer');
+  else if(path==='/customer/messages') main.innerHTML = viewMessages(u,'customer');
+  else if(path==='/customer/profile') main.innerHTML = viewProfile(u);
+  else if(path==='/seller/listings') main.innerHTML = viewListings(u);
+  else if(path==='/seller/orders') main.innerHTML = viewOrders(u,'seller');
+  else if(path==='/seller/messages') main.innerHTML = viewMessages(u,'seller');
+  else if(path==='/seller/profile') main.innerHTML = viewProfile(u);
+  else main.innerHTML = `<div class="container"><div class="empty-hero"><h2>Page not found</h2></div></div>`;
+
+  if(path==='/customer/profile' || path==='/seller/profile') setTimeout(()=>initMap(u), 30);
+}
+
+/* ---------------- layout / nav ---------------- */
+function waveSVG(fill, h){
+  return `<svg class="tide-divider" viewBox="0 0 1200 40" preserveAspectRatio="none" style="height:${h||26}px"><path d="M0,20 C150,45 350,0 600,18 C850,36 1050,4 1200,20 L1200,40 L0,40 Z" fill="${fill}"></path></svg>`;
+}
+
+function layout(path, u){
+  return `
+  <div class="topbar">
+    <div class="container">
+      <div class="brand" onclick="navigate('${u?'/':'/'}')">
+        <svg class="wave" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#E8622C"/><path d="M8 22 Q14 14 20 22 T32 22" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M8 27 Q14 19 20 27 T32 27" stroke="#fff" stroke-width="2" fill="none" opacity=".6" stroke-linecap="round"/></svg>
+        MaluMarket
+      </div>
+      ${navLinks(path,u)}
+      <button class="hamburger" onclick="document.querySelector('.navlinks').classList.toggle('open')">☰</button>
+    </div>
+  </div>
+  <div class="app-body"><div id="mainSlot" class="container" style="max-width:${u?'1180px':'none'};padding:${u?'0 20px':'0'}"></div></div>
+  <footer class="site-footer">
+    ${waveSVG('#0E3E52',22)}
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+        <div><b style="color:#fff;font-family:'Fraunces',serif;">MaluMarket</b> — connecting local fishermen with their neighbourhood, one delivery at a time.</div>
+        <div>Cash on Delivery only · Built for local districts across Sri Lanka</div>
+      </div>
+    </div>
+  </footer>`;
+}
+
+function navLinks(path, u){
+  if(!u){
+    return `<div class="navlinks">
+      <a href="#/" class="${path==='/'?'active':''}">Home</a>
+      <a href="#/login" class="${path==='/login'?'active':''}">Log in</a>
+      <a href="#/register" class="btn btn-primary btn-sm" style="margin-left:6px;">Get Started</a>
+    </div>`;
+  }
+  const unreadMsgs = unreadMessageCount(u);
+  const newOrders = newOrderCount(u);
+  if(u.role==='customer'){
+    return `<div class="navlinks">
+      <span class="role-pill">Customer</span>
+      <a href="#/customer/market" class="${path==='/customer/market'?'active':''}">Marketplace</a>
+      <a href="#/customer/cart" class="${path==='/customer/cart'?'active':''}">Cart ${State.cart.length?'<span class=\"badge\">'+State.cart.length+'</span>':''}</a>
+      <a href="#/customer/orders" class="${path==='/customer/orders'?'active':''}">Orders</a>
+      <a href="#/customer/messages" class="${path==='/customer/messages'?'active':''}">Messages ${unreadMsgs?'<span class="badge">'+unreadMsgs+'</span>':''}</a>
+      <a href="#/customer/profile" class="${path==='/customer/profile'?'active':''}">Profile</a>
+      <button class="navlink" onclick="logout()">Log out</button>
+    </div>`;
+  }
+  return `<div class="navlinks">
+    <span class="role-pill">Seller</span>
+    <a href="#/seller/listings" class="${path==='/seller/listings'?'active':''}">My Fish</a>
+    <a href="#/seller/orders" class="${path==='/seller/orders'?'active':''}">Orders ${newOrders?'<span class="badge">'+newOrders+'</span>':''}</a>
+    <a href="#/seller/messages" class="${path==='/seller/messages'?'active':''}">Messages ${unreadMsgs?'<span class="badge">'+unreadMsgs+'</span>':''}</a>
+    <a href="#/seller/profile" class="${path==='/seller/profile'?'active':''}">Profile</a>
+    <button class="navlink" onclick="logout()">Log out</button>
+  </div>`;
+}
+
+function logout(){ DB.write('mm_session', null); State.cart=[]; saveCart(); toast('Logged out'); navigate('/'); }
+
+function unreadMessageCount(u){
+  const convos = DB.convos().filter(c=> u.role==='customer' ? c.customerId===u.id : c.sellerId===u.id);
+  let n=0;
+  convos.forEach(c=> c.messages.forEach(m=>{ if(!m.read && m.sender!==u.role) n++; }));
+  return n;
+}
+function newOrderCount(u){
+  if(u.role!=='seller') return 0;
+  return DB.orders().filter(o=>o.sellerId===u.id && o.status==='Pending' && !o.sellerSeen).length;
+}
+
+/* ---------------- landing ---------------- */
+function viewLanding(){
+  return `
+  <div class="hero">
+    <div class="container">
+      <div>
+        <div class="eyebrow" style="color:#8FD6CC;">Local catch · Local delivery</div>
+        <h1>Fresh fish from your district's own fishermen, delivered to your door.</h1>
+        <p class="lede">Sellers post today's catch. You browse only what's actually available near you, negotiate a fair price, and pay cash when it arrives.</p>
+        <div class="cta-row">
+          <button class="btn btn-primary" onclick="navigate('/register')">Join as a Customer</button>
+          <button class="btn btn-outline" style="color:#fff;border-color:#fff;" onclick="navigate('/register')">Sell Your Catch</button>
+        </div>
+        <div class="hero-stat">
+          <div><b>25</b><span>districts covered</span></div>
+          <div><b>COD</b><span>only — no card needed</span></div>
+          <div><b>1:1</b><span>direct seller chat</span></div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="ticket"><div class="tt-top"><b>🐟 Fresh Tuna</b><span class="tt-price">Rs. 1,800/kg</span></div><small>Kamal Perera · Gampaha · 50kg available</small></div>
+        <div class="ticket"><div class="tt-top"><b>🦐 Tiger Prawns</b><span class="tt-price">Rs. 3,200/kg</span></div><small>Nimal Silva · Colombo · Delivers to Gampaha</small></div>
+      </div>
+    </div>
+  </div>
+  ${waveSVG('#EAF3F1',30)}
+  <section class="strip">
+    <div class="container">
+      <div class="section-head">
+        <div><div class="eyebrow">How it works</div><h2>From the boat to your kitchen</h2></div>
+      </div>
+      <div class="how-grid">
+        <div class="how-card"><div class="step-tag">01</div><h4>Sellers post today's catch</h4><p style="color:var(--muted);font-size:.88rem;">Fishermen list what's fresh, the weight available, and the districts they deliver to.</p></div>
+        <div class="how-card"><div class="step-tag">02</div><h4>You see only local sellers</div><p style="color:var(--muted);font-size:.88rem;">The marketplace matches listings to your district automatically — no distant sellers cluttering your feed.</p></div>
+        <div class="how-card"><div class="step-tag">03</div><h4>Negotiate, then confirm</h4><p style="color:var(--muted);font-size:.88rem;">Message the seller directly, agree on a price, and pin your delivery location on the map.</p></div>
+        <div class="how-card"><div class="step-tag">04</div><h4>Pay cash on delivery</h4><p style="color:var(--muted);font-size:.88rem;">No cards, no online payment — settle up with cash when your fish arrives.</p></div>
+      </div>
+    </div>
+  </section>
+  <section class="strip" style="padding-top:0;">
+    <div class="container">
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;background:linear-gradient(120deg,#fff,#F2F8F7);">
+        <div><h3 style="margin-bottom:4px;">Have fish to sell?</h3><p style="color:var(--muted);margin:0;">Set up your seller profile in under two minutes.</p></div>
+        <button class="btn btn-navy" onclick="navigate('/register')">Become a Seller</button>
+      </div>
+    </div>
+  </section>`;
+}
+
+/* ---------------- auth ---------------- */
+function viewAuth(mode){
+  return `
+  <div class="auth-wrap">
+    <div class="card">
+      <div class="tabs">
+        <button class="${mode==='login'?'active':''}" onclick="navigate('/login')">Log In</button>
+        <button class="${mode==='register'?'active':''}" onclick="navigate('/register')">Register</button>
+      </div>
+      ${mode==='login' ? loginForm() : registerForm()}
+    </div>
+    ${mode==='login' ? `<p style="text-align:center;color:var(--muted);font-size:.82rem;margin-top:14px;">Demo accounts — username <b>thisam</b> (customer) or <b>kamal_fisher</b> (seller), password <b>demo123</b>.</p>` : ''}
+  </div>`;
+}
+
+function loginForm(){
+  return `
+  <form onsubmit="return doLogin(event)">
+    <div class="field"><label>Username</label><input type="text" id="loginUser" required autocomplete="username"></div>
+    <div class="field"><label>Password</label><input type="password" id="loginPass" required autocomplete="current-password"></div>
+    <button class="btn btn-primary btn-block" type="submit">Log In</button>
+  </form>`;
+}
+function doLogin(e){
+  e.preventDefault();
+  const username = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const user = DB.users().find(u=>u.username.toLowerCase()===username.toLowerCase());
+  if(!user || user.passwordHash !== obfuscate(pass)){ toast('Incorrect username or password','err'); return false; }
+  DB.saveSession({userId:user.id});
+  toast('Welcome back, '+user.name+'!','ok');
+  navigate(user.role==='customer' ? '/customer/market' : '/seller/listings');
+  return false;
+}
+
+function registerForm(){
+  return `
+  <form onsubmit="return doRegister(event)">
+    <div class="field">
+      <label>I am a…</label>
+      <div class="chip-group">
+        <div class="chip-check on" id="roleCustomerChip" onclick="setRegRole('customer')">Customer</div>
+        <div class="chip-check" id="roleSellerChip" onclick="setRegRole('seller')">Seller / Fisherman</div>
+      </div>
+      <input type="hidden" id="regRole" value="customer">
+    </div>
+    <div class="row2">
+      <div class="field"><label>Full name</label><input type="text" id="regName" required></div>
+      <div class="field"><label>Phone number</label><input type="tel" id="regPhone" required></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Username</label><input type="text" id="regUser" required></div>
+      <div class="field"><label>Password</label><input type="password" id="regPass" required minlength="4"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>District</label>
+        <select id="regDistrict" required><option value="">Select district</option>${DISTRICTS.map(d=>`<option>${d}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Region / Area</label><input type="text" id="regRegion" placeholder="e.g. Negombo" required></div>
+    </div>
+    <div class="field"><label>Address</label><textarea id="regAddress" required placeholder="Street, city..."></textarea></div>
+    <div id="sellerOnlyFields" style="display:none;">
+      <div class="field"><label>Operating area</label><input type="text" id="regOperating" placeholder="Where you usually fish / sell from"></div>
+      <div class="field"><label>Delivery areas (districts you deliver to)</label>
+        <div class="chip-group" id="deliveryChips">${DISTRICTS.map(d=>`<div class="chip-check" data-d="${d}" onclick="toggleDeliveryChip(this)">${d}</div>`).join('')}</div>
+        <div class="hint">Tap all districts you can realistically deliver fresh fish to.</div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" type="submit" style="margin-top:6px;">Create Account</button>
+  </form>`;
+}
+function setRegRole(role){
+  document.getElementById('regRole').value = role;
+  document.getElementById('roleCustomerChip').classList.toggle('on', role==='customer');
+  document.getElementById('roleSellerChip').classList.toggle('on', role==='seller');
+  document.getElementById('sellerOnlyFields').style.display = role==='seller' ? 'block':'none';
+}
+function toggleDeliveryChip(el){ el.classList.toggle('on'); }
+
+function doRegister(e){
+  e.preventDefault();
+  const role = document.getElementById('regRole').value;
+  const username = document.getElementById('regUser').value.trim();
+  if(DB.users().some(u=>u.username.toLowerCase()===username.toLowerCase())){ toast('That username is already taken','err'); return false; }
+  const base = {
+    id: uid('u'), role, username, passwordHash: obfuscate(document.getElementById('regPass').value),
+    name: document.getElementById('regName').value.trim(),
+    phone: document.getElementById('regPhone').value.trim(),
+    district: document.getElementById('regDistrict').value,
+    region: document.getElementById('regRegion').value.trim(),
+    address: document.getElementById('regAddress').value.trim(),
+    lat: null, lng: null,
+  };
+  if(role==='seller'){
+    base.operatingArea = document.getElementById('regOperating').value.trim();
+    base.deliveryAreas = Array.from(document.querySelectorAll('#deliveryChips .chip-check.on')).map(c=>c.dataset.d);
+    if(base.deliveryAreas.length===0) base.deliveryAreas=[base.district];
+    base.bio = '';
+  }
+  const users = DB.users(); users.push(base); DB.saveUsers(users);
+  DB.saveSession({userId: base.id});
+  toast('Account created — welcome, '+base.name+'!','ok');
+  navigate(role==='customer' ? '/customer/profile' : '/seller/profile');
+  return false;
+}
+
+/* ---------------- profile (shared, role-aware) ---------------- */
+function viewProfile(u){
+  const isSeller = u.role==='seller';
+  return `
+  <div class="dash-grid">
+    ${sideNav(u,'profile')}
+    <div>
+      <div class="card">
+        <h2>Your profile</h2>
+        <p style="color:var(--muted);margin-top:-6px;">Keep this accurate — it's how ${isSeller?'customers find you':'sellers know where to deliver'}.</p>
+        <div class="row2">
+          <div class="field"><label>Full name</label><input type="text" id="pfName" value="${esc(u.name)}"></div>
+          <div class="field"><label>Phone</label><input type="tel" id="pfPhone" value="${esc(u.phone)}"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>District</label><select id="pfDistrict">${DISTRICTS.map(d=>`<option ${d===u.district?'selected':''}>${d}</option>`).join('')}</select></div>
+          <div class="field"><label>Region / Area</label><input type="text" id="pfRegion" value="${esc(u.region||'')}"></div>
+        </div>
+        <div class="field"><label>${isSeller?'Shop / delivery address':'Delivery address'}</label><textarea id="pfAddress">${esc(u.address||'')}</textarea></div>
+        ${isSeller?`
+        <div class="field"><label>Operating area</label><input type="text" id="pfOperating" value="${esc(u.operatingArea||'')}"></div>
+        <div class="field"><label>Delivery areas</label>
+          <div class="chip-group" id="pfDeliveryChips">${DISTRICTS.map(d=>`<div class="chip-check ${u.deliveryAreas&&u.deliveryAreas.includes(d)?'on':''}" data-d="${d}" onclick="toggleDeliveryChip(this)">${d}</div>`).join('')}</div>
+        </div>
+        <div class="field"><label>Short bio</label><textarea id="pfBio">${esc(u.bio||'')}</textarea></div>
+        `:''}
+        <div class="field">
+          <label>Pin your ${isSeller?'shop':'delivery'} location on the map</label>
+          <div id="mapPicker"></div>
+          <div class="hint">Click anywhere on the map to drop a pin. ${u.lat?`Current pin: ${u.lat.toFixed(4)}, ${u.lng.toFixed(4)}`:'No pin set yet — defaults to your district centre.'}</div>
+        </div>
+        <button class="btn btn-primary" onclick="saveProfile('${u.id}', ${isSeller})">Save Profile</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+const DISTRICT_COORDS = {
+  "Colombo":[6.9271,79.8612], "Gampaha":[7.0917,79.9985], "Kalutara":[6.5854,79.9607], "Kandy":[7.2906,80.6337],
+  "Matale":[7.4675,80.6234], "Nuwara Eliya":[6.9497,80.7891], "Galle":[6.0535,80.2210], "Matara":[5.9549,80.5540],
+  "Hambantota":[6.1246,81.1185], "Jaffna":[9.6615,80.0255], "Kilinochchi":[9.3803,80.3770], "Mannar":[8.9810,79.9044],
+  "Vavuniya":[8.7514,80.4971], "Mullaitivu":[9.2670,80.8142], "Batticaloa":[7.7310,81.6747], "Ampara":[7.2975,81.6747],
+  "Trincomalee":[8.5874,81.2152], "Kurunegala":[7.4818,80.3609], "Puttalam":[8.0362,79.8283], "Anuradhapura":[8.3114,80.4037],
+  "Polonnaruwa":[7.9403,81.0188], "Badulla":[6.9934,81.0550], "Monaragala":[6.8714,81.3507], "Ratnapura":[6.6828,80.3992],
+  "Kegalle":[7.2513,80.3464]
+};
+
+function initMap(u){
+  const el = document.getElementById('mapPicker');
+  if(!el || typeof L==='undefined') return;
+  const start = u.lat ? [u.lat,u.lng] : (DISTRICT_COORDS[u.district] || [7.0,80.7]);
+  const map = L.map('mapPicker').setView(start, u.lat?12:8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap'}).addTo(map);
+  let marker = L.marker(start, {draggable:true}).addTo(map);
+  State.mapObj = map; State.mapMarker = marker;
+  map.on('click', e=>{ marker.setLatLng(e.latlng); });
+}
+
+function saveProfile(userId, isSeller){
+  const users = DB.users();
+  const idx = users.findIndex(u=>u.id===userId);
+  if(idx<0) return;
+  const u = users[idx];
+  u.name = document.getElementById('pfName').value.trim();
+  u.phone = document.getElementById('pfPhone').value.trim();
+  u.district = document.getElementById('pfDistrict').value;
+  u.region = document.getElementById('pfRegion').value.trim();
+  u.address = document.getElementById('pfAddress').value.trim();
+  if(State.mapMarker){ const ll = State.mapMarker.getLatLng(); u.lat = ll.lat; u.lng = ll.lng; }
+  if(isSeller){
+    u.operatingArea = document.getElementById('pfOperating').value.trim();
+    u.deliveryAreas = Array.from(document.querySelectorAll('#pfDeliveryChips .chip-check.on')).map(c=>c.dataset.d);
+    u.bio = document.getElementById('pfBio').value.trim();
+  }
+  users[idx]=u; DB.saveUsers(users);
+  toast('Profile saved','ok');
+  render();
+}
+
+/* ---------------- side nav for dashboards ---------------- */
+function sideNav(u, active){
+  if(u.role==='customer'){
+    return `<div class="side-nav">
+      <button class="${active==='market'?'active':''}" onclick="navigate('/customer/market')">🐟 Marketplace</button>
+      <button class="${active==='cart'?'active':''}" onclick="navigate('/customer/cart')">🛒 Cart (${State.cart.length})</button>
+      <button class="${active==='orders'?'active':''}" onclick="navigate('/customer/orders')">📦 My Orders</button>
+      <button class="${active==='messages'?'active':''}" onclick="navigate('/customer/messages')">💬 Messages</button>
+      <button class="${active==='profile'?'active':''}" onclick="navigate('/customer/profile')">👤 Profile</button>
+    </div>`;
+  }
+  return `<div class="side-nav">
+    <button class="${active==='listings'?'active':''}" onclick="navigate('/seller/listings')">🐟 My Fish</button>
+    <button class="${active==='orders'?'active':''}" onclick="navigate('/seller/orders')">📦 Orders</button>
+    <button class="${active==='messages'?'active':''}" onclick="navigate('/seller/messages')">💬 Messages</button>
+    <button class="${active==='profile'?'active':''}" onclick="navigate('/seller/profile')">👤 Profile</button>
+  </div>`;
+}
+
+/* ---------------- marketplace (customer) ---------------- */
+let marketFilter = {q:'', cat:'', sort:'relevant', showAll:false};
+function viewMarket(u){
+  const sellers = DB.users().filter(x=>x.role==='seller');
+  let listings = DB.listings().filter(l=>l.available && l.quantity>0);
+
+  const eligible = listings.filter(l=> l.deliveryAreas.includes(u.district) );
+  let pool = marketFilter.showAll ? listings : eligible;
+
+  if(marketFilter.q) pool = pool.filter(l=>l.name.toLowerCase().includes(marketFilter.q.toLowerCase()));
+  if(marketFilter.cat) pool = pool.filter(l=>l.category===marketFilter.cat);
+  if(marketFilter.sort==='price_low') pool = [...pool].sort((a,b)=>a.price-b.price);
+  if(marketFilter.sort==='price_high') pool = [...pool].sort((a,b)=>b.price-a.price);
+
+  return `
+  <div class="dash-grid">
+    ${sideNav(u,'market')}
+    <div>
+      <div class="location-banner">📍 Showing fish from sellers who deliver to <b style="margin:0 4px;">${esc(u.district)}</b>
+        ${!marketFilter.showAll ? `<button class="btn btn-ghost btn-sm" onclick="marketFilter.showAll=true;render()">Show all districts</button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="marketFilter.showAll=false;render()">Back to my district only</button>`}
+      </div>
+      <div class="filter-bar">
+        <input type="search" placeholder="Search fish (e.g. tuna, prawns)..." value="${esc(marketFilter.q)}" oninput="marketFilter.q=this.value;renderMarketGrid('${u.id}')">
+        <select onchange="marketFilter.cat=this.value;renderMarketGrid('${u.id}')">
+          <option value="">All categories</option>
+          ${CATEGORIES.map(c=>`<option value="${c}" ${marketFilter.cat===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+        <select onchange="marketFilter.sort=this.value;renderMarketGrid('${u.id}')">
+          <option value="relevant" ${marketFilter.sort==='relevant'?'selected':''}>Most relevant</option>
+          <option value="price_low" ${marketFilter.sort==='price_low'?'selected':''}>Price: low to high</option>
+          <option value="price_high" ${marketFilter.sort==='price_high'?'selected':''}>Price: high to low</option>
+        </select>
+      </div>
+      <div id="marketGrid">${marketGridHTML(pool, sellers)}</div>
+    </div>
+  </div>`;
+}
+function renderMarketGrid(userId){
+  const u = currentUser();
+  document.getElementById('mainSlot').innerHTML = viewMarket(u);
+}
+function marketGridHTML(pool, sellers){
+  if(pool.length===0){
+    return `<div class="empty-state card"><div class="ico">🎣</div><h3>No fish match right now</h3><p>Try widening your search to all districts, or check back once a local seller posts fresh stock.</p></div>`;
+  }
+  return `<div class="fish-grid">${pool.map(l=>fishCardHTML(l, sellers.find(s=>s.id===l.sellerId))).join('')}</div>`;
+}
+function fishCardHTML(l, seller){
+  const low = l.quantity<=5;
+  return `
+  <div class="fish-card">
+    <div class="fish-thumb">
+      ${l.image ? `<img src="${l.image}" alt="${esc(l.name)}">` : FISH_EMOJI[l.category]||'🐟'}
+      <span class="cat-flag">${esc(l.category)}</span>
+    </div>
+    <div class="fish-body">
+      <h4>${esc(l.name)}</h4>
+      <div class="fish-price">${fmtMoney(l.price)} <span>/ kg</span></div>
+      <div class="fish-seller">${seller?esc(seller.name):'Seller'} · ${esc(l.district)}</div>
+      <div class="fish-meta"><span class="stock-tag ${low?'low':''}">${l.quantity}kg available</span><span>${esc((seller&&seller.deliveryAreas)?seller.deliveryAreas.join(', '):'')}</span></div>
+      <div class="fish-actions">
+        <button class="btn btn-outline btn-sm" onclick="openNegotiate('${l.id}')">Negotiate</button>
+        <button class="btn btn-primary btn-sm" onclick="openAddToCart('${l.id}')">Add to Cart</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------------- add to cart modal ---------------- */
+function openAddToCart(listingId){
+  const l = DB.listings().find(x=>x.id===listingId);
+  if(!l) return;
+  showModal(`
+    <div class="modal-head"><h3>${esc(l.name)}</h3><button onclick="closeModal()">✕</button></div>
+    <p style="color:var(--muted);font-size:.88rem;">${esc(l.description||'')}</p>
+    <div class="field"><label>Quantity (kg) — ${l.quantity}kg available</label>
+      <input type="number" id="addQty" class="qty-input" style="width:100%;" min="0.5" step="0.5" max="${l.quantity}" value="1" oninput="updateAddTotal(${l.price})">
+    </div>
+    <div style="font-weight:700;font-size:1.1rem;color:var(--accent-dark);" id="addTotalLine">${fmtMoney(l.price)}</div>
+    <button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="confirmAddToCart('${l.id}')">Add to Cart</button>
+  `);
+}
+function updateAddTotal(price){
+  const qty = parseFloat(document.getElementById('addQty').value)||0;
+  document.getElementById('addTotalLine').textContent = fmtMoney(price*qty);
+}
+function confirmAddToCart(listingId){
+  const l = DB.listings().find(x=>x.id===listingId);
+  const qty = parseFloat(document.getElementById('addQty').value);
+  if(!qty || qty<=0){ toast('Enter a valid quantity','err'); return; }
+  if(qty>l.quantity){ toast('Only '+l.quantity+'kg available','err'); return; }
+  const existing = State.cart.find(c=>c.listingId===listingId);
+  if(existing) existing.qty += qty; else State.cart.push({listingId, qty, negotiatedPrice:null});
+  saveCart();
+  closeModal();
+  toast(qty+'kg of '+l.name+' added to cart','ok');
+  render();
+}
+
+/* ---------------- negotiate modal ---------------- */
+function openNegotiate(listingId){
+  const l = DB.listings().find(x=>x.id===listingId);
+  const seller = DB.users().find(u=>u.id===l.sellerId);
+  showModal(`
+    <div class="modal-head"><h3>Negotiate: ${esc(l.name)}</h3><button onclick="closeModal()">✕</button></div>
+    <p style="color:var(--muted);font-size:.85rem;">Listed at ${fmtMoney(l.price)}/kg by ${esc(seller.name)}. Send a message or propose a price — they'll reply in Messages.</p>
+    <div class="field"><label>Quantity you want (kg)</label><input type="number" id="negQty" min="0.5" step="0.5" value="1"></div>
+    <div class="field"><label>Your offer (Rs./kg) — optional</label><input type="number" id="negPrice" placeholder="${l.price}"></div>
+    <div class="field"><label>Message</label><textarea id="negMsg" placeholder="e.g. Can you do a better price for 5kg?"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="sendNegotiation('${l.id}')">Send to Seller</button>
+  `);
+}
+function sendNegotiation(listingId){
+  const l = DB.listings().find(x=>x.id===listingId);
+  const u = currentUser();
+  const qty = parseFloat(document.getElementById('negQty').value)||1;
+  const offer = parseFloat(document.getElementById('negPrice').value) || null;
+  const msg = document.getElementById('negMsg').value.trim();
+  let convo = DB.convos().find(c=>c.customerId===u.id && c.sellerId===l.sellerId && c.listingId===l.id);
+  const convos = DB.convos();
+  if(!convo){
+    convo = {id:uid('cv'), customerId:u.id, sellerId:l.sellerId, listingId:l.id, messages:[]};
+    convos.push(convo);
+  }
+  const text = (msg? msg+' ' : '') + `Requesting ${qty}kg` + (offer?` at Rs. ${offer}/kg (listed ${fmtMoney(l.price)}).`:` at listed price ${fmtMoney(l.price)}/kg.`);
+  convo.messages.push({sender:'customer', type: offer?'offer':'message', text, qty, price:offer, listingId:l.id, time:Date.now(), read:false, resolved:false});
+  DB.saveConvos(convos);
+  closeModal();
+  toast('Sent to seller — see it under Messages','ok');
+}
+
+/* ---------------- cart ---------------- */
+function viewCart(u){
+  if(State.cart.length===0){
+    return `<div class="dash-grid">${sideNav(u,'cart')}<div class="empty-state card"><div class="ico">🛒</div><h3>Your cart is empty</h3><p>Browse the marketplace to add fresh fish from local sellers.</p><button class="btn btn-primary" onclick="navigate('/customer/market')" style="margin-top:10px;">Go to Marketplace</button></div></div>`;
+  }
+  const listings = DB.listings(); const users = DB.users();
+  const bySeller = {};
+  State.cart.forEach(item=>{
+    const l = listings.find(x=>x.id===item.listingId);
+    if(!l) return;
+    (bySeller[l.sellerId] = bySeller[l.sellerId]||[]).push({item,l});
+  });
+  let grand = 0;
+  const groupsHTML = Object.keys(bySeller).map(sellerId=>{
+    const seller = users.find(x=>x.id===sellerId);
+    const deliverable = seller.deliveryAreas.includes(u.district);
+    let sub = 0;
+    const rows = bySeller[sellerId].map(({item,l})=>{
+      const price = item.negotiatedPrice || l.price;
+      const lineTotal = price*item.qty; sub += lineTotal;
+      return `<div class="cart-line">
+        <div><div class="ci-name">${esc(l.name)} ${item.negotiatedPrice?'<span style="color:var(--success);font-size:.72rem;">(negotiated)</span>':''}</div><div class="ci-seller">${esc(seller.name)} · ${esc(l.district)}</div></div>
+        <input type="number" class="qty-input" min="0.5" step="0.5" value="${item.qty}" onchange="updateCartQty('${item.listingId}', this.value)">
+        <div class="mono" style="width:110px;text-align:right;">${fmtMoney(lineTotal)}</div>
+        <button class="btn btn-ghost btn-sm" onclick="removeFromCart('${item.listingId}')">✕</button>
+      </div>`;
+    }).join('');
+    grand += sub;
+    return `<div class="seller-group">
+      <h4>${esc(seller.name)} ${!deliverable?'<span style="color:var(--danger);font-weight:600;font-size:.76rem;">— does not deliver to '+esc(u.district)+'</span>':''}</h4>
+      ${rows}
+      <div style="text-align:right;font-weight:700;margin-top:6px;">Subtotal: ${fmtMoney(sub)}</div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="dash-grid">
+    ${sideNav(u,'cart')}
+    <div>
+      <div class="card">
+        <h2>Your Cart</h2>
+        <p style="color:var(--muted);margin-top:-6px;font-size:.85rem;">Orders are automatically split by seller — each seller only sees their own order.</p>
+        ${groupsHTML}
+        <div class="total-row"><span>Grand Total</span><span>${fmtMoney(grand)}</span></div>
+        <button class="btn btn-primary btn-block" style="margin-top:18px;" onclick="openCheckout()">Proceed to Checkout</button>
+      </div>
+    </div>
+  </div>`;
+}
+function updateCartQty(listingId, val){
+  const item = State.cart.find(c=>c.listingId===listingId);
+  const l = DB.listings().find(x=>x.id===listingId);
+  let qty = parseFloat(val)||0;
+  if(qty<=0){ removeFromCart(listingId); return; }
+  if(l && qty>l.quantity){ toast('Only '+l.quantity+'kg available','err'); qty=l.quantity; }
+  item.qty = qty; saveCart(); render();
+}
+function removeFromCart(listingId){ State.cart = State.cart.filter(c=>c.listingId!==listingId); saveCart(); render(); }
+
+/* ---------------- checkout ---------------- */
+function openCheckout(){
+  const u = currentUser();
+  const listings = DB.listings(); const users = DB.users();
+  const bySeller = {};
+  State.cart.forEach(item=>{ const l=listings.find(x=>x.id===item.listingId); if(l) (bySeller[l.sellerId]=bySeller[l.sellerId]||[]).push({item,l}); });
+  const blocked = Object.keys(bySeller).filter(sid=>{
+    const seller = users.find(x=>x.id===sid);
+    return !seller.deliveryAreas.includes(u.district);
+  });
+  if(blocked.length){
+    const names = blocked.map(sid=>users.find(x=>x.id===sid).name).join(', ');
+    toast('Sorry, this seller does not currently provide delivery to your area: '+names,'err');
+    return;
+  }
+  showModal(`
+    <div class="modal-head"><h3>Confirm Order</h3><button onclick="closeModal()">✕</button></div>
+    <p style="font-size:.85rem;color:var(--muted);">Delivery address on file:</p>
+    <div class="field"><textarea id="coAddress">${esc(u.address||'')}</textarea></div>
+    <div class="field"><label>Payment method</label><input type="text" value="Cash on Delivery" disabled style="background:#f3f3f3;"></div>
+    <p style="font-size:.8rem;color:var(--muted);">Your saved map pin will be attached to this order automatically.</p>
+    <button class="btn btn-primary btn-block" onclick="placeOrder()">Confirm &amp; Place Order</button>
+  `);
+}
+function placeOrder(){
+  const u = currentUser();
+  const listings = DB.listings(); const users = DB.users();
+  const address = document.getElementById('coAddress').value.trim();
+  const bySeller = {};
+  State.cart.forEach(item=>{ const l=listings.find(x=>x.id===item.listingId); if(l) (bySeller[l.sellerId]=bySeller[l.sellerId]||[]).push({item,l}); });
+
+  const orders = DB.orders();
+  let count = 0;
+  Object.keys(bySeller).forEach(sellerId=>{
+    const items = bySeller[sellerId].map(({item,l})=>({
+      listingId:l.id, name:l.name, qty:item.qty, price: item.negotiatedPrice || l.price, negotiated: !!item.negotiatedPrice
+    }));
+    const total = items.reduce((s,i)=>s+i.price*i.qty,0);
+    orders.push({
+      id: uid('ord'), customerId:u.id, sellerId, items, total,
+      deliveryAddress: address, lat:u.lat, lng:u.lng,
+      date: Date.now(), paymentMethod:'Cash on Delivery', status:'Pending', sellerSeen:false
+    });
+    // decrement stock
+    items.forEach(i=>{
+      const l = listings.find(x=>x.id===i.listingId);
+      if(l) l.quantity = Math.max(0, l.quantity - i.qty);
+    });
+    count++;
+  });
+  DB.saveOrders(orders);
+  DB.saveListings(listings);
+  State.cart = []; saveCart();
+  closeModal();
+  toast(count+' order'+(count>1?'s':'')+' placed with Cash on Delivery','ok');
+  navigate('/customer/orders');
+}
+
+/* ---------------- orders (both roles) ---------------- */
+function viewOrders(u, role){
+  let orders = DB.orders().filter(o=> role==='customer' ? o.customerId===u.id : o.sellerId===u.id);
+  orders.sort((a,b)=>b.date-a.date);
+  if(role==='seller'){ orders.forEach(o=>{ o.sellerSeen=true; }); DB.saveOrders(DB.orders().map(o2=>{ const m=orders.find(x=>x.id===o2.id); return m?{...o2,sellerSeen:true}:o2; })); }
+  const users = DB.users();
+  if(orders.length===0){
+    return `<div class="dash-grid">${sideNav(u,'orders')}<div class="empty-state card"><div class="ico">📦</div><h3>No orders yet</h3></div></div>`;
+  }
+  return `<div class="dash-grid">${sideNav(u,'orders')}<div>
+    <h2>${role==='customer'?'My Orders':'Orders Received'}</h2>
+    ${orders.map(o=>orderCardHTML(o, role, users)).join('')}
+  </div></div>`;
+}
+function orderCardHTML(o, role, users){
+  const other = role==='customer' ? users.find(x=>x.id===o.sellerId) : users.find(x=>x.id===o.customerId);
+  const itemsHTML = o.items.map(i=>`<div><span>${esc(i.name)} × ${i.qty}kg</span><span class="mono">${fmtMoney(i.price*i.qty)}</span></div>`).join('');
+  const canAdvance = role==='seller' && !['Delivered','Cancelled','Rejected'].includes(o.status);
+  const nextIdx = STATUS_FLOW.indexOf(o.status);
+  const nextStatus = nextIdx>=0 && nextIdx<STATUS_FLOW.length-1 ? STATUS_FLOW[nextIdx+1] : null;
+  return `
+  <div class="order-card">
+    <div class="order-top">
+      <div><b>Order #${o.id.slice(-6).toUpperCase()}</b><div style="font-size:.8rem;color:var(--muted);">${role==='customer'?'Seller':'Customer'}: ${esc(other?other.name:'—')} · ${new Date(o.date).toLocaleString()}</div></div>
+      <span class="status-pill ${STATUS_CLASS[o.status]}">${o.status}</span>
+    </div>
+    <div class="order-items">${itemsHTML}</div>
+    <div style="display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);flex-wrap:wrap;gap:6px;">
+      <span>💰 ${o.paymentMethod}</span><span>📍 ${esc(o.deliveryAddress||'—')}</span>
+    </div>
+    <div class="total-row" style="font-size:1rem;margin-top:8px;padding-top:8px;"><span>Total</span><span>${fmtMoney(o.total)}</span></div>
+    ${canAdvance ? `<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      ${nextStatus? `<button class="btn btn-success btn-sm" onclick="advanceOrder('${o.id}','${nextStatus}')">Mark as ${nextStatus}</button>`:''}
+      ${o.status==='Pending' ? `<button class="btn btn-danger btn-sm" onclick="advanceOrder('${o.id}','Rejected')">Reject</button>`:''}
+      ${!['Delivered'].includes(o.status) ? `<button class="btn btn-ghost btn-sm" onclick="advanceOrder('${o.id}','Cancelled')">Cancel</button>`:''}
+    </div>` : ''}
+  </div>`;
+}
+function advanceOrder(orderId, status){
+  const orders = DB.orders();
+  const o = orders.find(x=>x.id===orderId);
+  if(!o) return;
+  o.status = status;
+  DB.saveOrders(orders);
+  toast('Order updated to '+status, 'ok');
+  render();
+}
+
+/* ---------------- messages / negotiation ---------------- */
+function viewMessages(u, role){
+  const convos = DB.convos().filter(c=> role==='customer' ? c.customerId===u.id : c.sellerId===u.id);
+  const users = DB.users(); const listings = DB.listings();
+  convos.sort((a,b)=> (b.messages.at(-1)?.time||0) - (a.messages.at(-1)?.time||0));
+  if(!State.activeConvo && convos.length) State.activeConvo = convos[0].id;
+  const active = convos.find(c=>c.id===State.activeConvo) || convos[0];
+
+  const listHTML = convos.length ? convos.map(c=>{
+    const other = role==='customer' ? users.find(x=>x.id===c.sellerId) : users.find(x=>x.id===c.customerId);
+    const listing = listings.find(l=>l.id===c.listingId);
+    const last = c.messages.at(-1);
+    return `<div class="conv-item ${active&&c.id===active.id?'active':''}" onclick="openConvo('${c.id}')">
+      <div class="cv-name">${esc(other?other.name:'Unknown')} ${listing?'· '+esc(listing.name):''}</div>
+      <div class="cv-snip">${esc(last?last.text:'')}</div>
+    </div>`;
+  }).join('') : `<div class="empty-state"><div class="ico">💬</div>No conversations yet</div>`;
+
+  let chatHTML = `<div class="empty-state"><div class="ico">👋</div>Select a conversation</div>`;
+  if(active){
+    const other = role==='customer' ? users.find(x=>x.id===active.sellerId) : users.find(x=>x.id===active.customerId);
+    const listing = listings.find(l=>l.id===active.listingId);
+    active.messages.forEach(m=>{ if(m.sender!==role) m.read=true; });
+    DB.saveConvos(DB.convos().map(c=>c.id===active.id?active:c));
+    const bubbles = active.messages.map(m=>{
+      const mine = m.sender===role;
+      if(m.type==='offer' && !m.resolved && role==='seller' && !mine){
+        return `<div class="bubble offer ${mine?'me':''}">${esc(m.text)}
+          <div class="offer-actions">
+            <button class="btn btn-success btn-sm" onclick="respondOffer('${active.id}', ${m.time}, 'accept')">Accept</button>
+            <button class="btn btn-outline btn-sm" onclick="promptCounter('${active.id}', ${m.time})">Counter</button>
+            <button class="btn btn-danger btn-sm" onclick="respondOffer('${active.id}', ${m.time}, 'reject')">Reject</button>
+          </div></div>`;
+      }
+      return `<div class="bubble ${m.type==='offer'?'offer ':''}${mine?'me':'them'}">${esc(m.text)}</div>`;
+    }).join('');
+    chatHTML = `
+      <div class="chat-head">${esc(other?other.name:'')} ${listing?'<span style="font-weight:400;color:var(--muted);font-size:.82rem;"> · re: '+esc(listing.name)+'</span>':''}</div>
+      <div class="chat-body" id="chatBody">${bubbles}</div>
+      <div class="chat-input">
+        <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat('${active.id}')">
+        <button class="btn btn-primary btn-sm" onclick="sendChat('${active.id}')">Send</button>
+      </div>`;
+  }
+
+  setTimeout(()=>{ const cb=document.getElementById('chatBody'); if(cb) cb.scrollTop=cb.scrollHeight; }, 20);
+
+  return `<div class="dash-grid">${sideNav(u, role==='seller'?'messages':'messages')}
+    <div>
+      <h2>Messages</h2>
+      <div class="msg-layout">
+        <div class="conv-list">${listHTML}</div>
+        <div class="chat-pane">${chatHTML}</div>
+      </div>
+    </div>
+  </div>`;
+}
+function openConvo(id){ State.activeConvo=id; render(); }
+function sendChat(convoId){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const u = currentUser();
+  const convos = DB.convos();
+  const c = convos.find(x=>x.id===convoId);
+  c.messages.push({sender:u.role, type:'message', text, time:Date.now(), read:false});
+  DB.saveConvos(convos);
+  render();
+}
+function respondOffer(convoId, msgTime, action){
+  const convos = DB.convos();
+  const c = convos.find(x=>x.id===convoId);
+  const m = c.messages.find(x=>x.time===msgTime);
+  m.resolved = true;
+  const u = currentUser();
+  if(action==='accept'){
+    c.messages.push({sender:'seller', type:'accept', text:`Accepted: ${m.qty}kg at Rs. ${m.price || 'listed price'}/kg.`, time:Date.now(), read:false});
+    // reflect negotiated price into an order automatically as an Accepted order
+    createOrderFromNegotiation(c, m, m.price);
+  } else {
+    c.messages.push({sender:'seller', type:'reject', text:`Sorry, I can't accept that offer for ${m.qty}kg.`, time:Date.now(), read:false});
+  }
+  DB.saveConvos(convos);
+  render();
+}
+function promptCounter(convoId, msgTime){
+  showModal(`
+    <div class="modal-head"><h3>Counter-offer</h3><button onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Your price (Rs./kg)</label><input type="number" id="counterPrice"></div>
+    <button class="btn btn-primary btn-block" onclick="sendCounter('${convoId}', ${msgTime})">Send Counter-offer</button>
+  `);
+}
+function sendCounter(convoId, msgTime){
+  const price = parseFloat(document.getElementById('counterPrice').value);
+  if(!price){ toast('Enter a price','err'); return; }
+  const convos = DB.convos();
+  const c = convos.find(x=>x.id===convoId);
+  const orig = c.messages.find(x=>x.time===msgTime);
+  orig.resolved = true;
+  c.messages.push({sender:'seller', type:'offer', text:`Counter-offer: Rs. ${price}/kg for ${orig.qty}kg.`, qty:orig.qty, price, listingId:orig.listingId, time:Date.now(), read:false, resolved:false});
+  DB.saveConvos(convos);
+  closeModal();
+  render();
+}
+function createOrderFromNegotiation(convo, offerMsg, price){
+  const listing = DB.listings().find(l=>l.id===offerMsg.listingId);
+  if(!listing) return;
+  const orders = DB.orders();
+  const finalPrice = price || listing.price;
+  orders.push({
+    id: uid('ord'), customerId: convo.customerId, sellerId: convo.sellerId,
+    items:[{listingId:listing.id, name:listing.name, qty:offerMsg.qty, price:finalPrice, negotiated:true}],
+    total: finalPrice*offerMsg.qty,
+    deliveryAddress: (DB.users().find(u=>u.id===convo.customerId)||{}).address || '',
+    date: Date.now(), paymentMethod:'Cash on Delivery', status:'Accepted', sellerSeen:true
+  });
+  DB.saveOrders(orders);
+  toast('Order created from accepted negotiation','ok');
+}
+
+/* ---------------- seller listings management ---------------- */
+function viewListings(u){
+  const listings = DB.listings().filter(l=>l.sellerId===u.id);
+  return `<div class="dash-grid">${sideNav(u,'listings')}
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h2 style="margin:0;">My Fish Listings</h2>
+        <button class="btn btn-primary" onclick="openListingForm()">+ Post Fish</button>
+      </div>
+      ${listings.length===0 ? `<div class="empty-state card"><div class="ico">🐟</div><h3>No listings yet</h3><p>Post today's catch so nearby customers can find it.</p></div>` :
+      listings.map(l=>listingRowHTML(l)).join('')}
+    </div>
+  </div>`;
+}
+function listingRowHTML(l){
+  return `<div class="listing-row">
+    ${l.image?`<img src="${l.image}">`:`<div class="ph">${FISH_EMOJI[l.category]||'🐟'}</div>`}
+    <div class="lr-info">
+      <h4>${esc(l.name)} ${!l.available?'<span style="color:var(--danger);font-size:.75rem;">(unavailable)</span>':''}</h4>
+      <div class="lr-meta">${esc(l.category)} · ${fmtMoney(l.price)}/kg · ${l.quantity}kg left · delivers to ${esc((l.deliveryAreas||[]).join(', '))}</div>
+    </div>
+    <div class="lr-actions">
+      <button class="btn btn-outline btn-sm" onclick="openListingForm('${l.id}')">Edit</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAvailable('${l.id}')">${l.available?'Mark Unavailable':'Mark Available'}</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteListing('${l.id}')">Delete</button>
+    </div>
+  </div>`;
+}
+function toggleAvailable(id){
+  const listings = DB.listings(); const l = listings.find(x=>x.id===id); l.available=!l.available; DB.saveListings(listings); render();
+}
+function deleteListing(id){
+  if(!confirm('Delete this listing permanently?')) return;
+  DB.saveListings(DB.listings().filter(x=>x.id!==id)); toast('Listing deleted','ok'); render();
+}
+function openListingForm(id){
+  const u = currentUser();
+  const l = id ? DB.listings().find(x=>x.id===id) : null;
+  showModal(`
+    <div class="modal-head"><h3>${l?'Edit':'Post'} Fish Listing</h3><button onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Fish name</label><input type="text" id="lfName" value="${l?esc(l.name):''}" required></div>
+    <div class="row2">
+      <div class="field"><label>Category</label><select id="lfCategory">${CATEGORIES.map(c=>`<option ${l&&l.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label>Price per kg (Rs.)</label><input type="number" id="lfPrice" value="${l?l.price:''}" required></div>
+    </div>
+    <div class="field"><label>Available quantity (kg)</label><input type="number" id="lfQty" value="${l?l.quantity:''}" required></div>
+    <div class="field"><label>Description</label><textarea id="lfDesc">${l?esc(l.description||''):''}</textarea></div>
+    <div class="field"><label>Photo (optional)</label><input type="file" id="lfImage" accept="image/*"></div>
+    <div class="field"><label>District</label><select id="lfDistrict">${DISTRICTS.map(d=>`<option ${((l&&l.district)||u.district)===d?'selected':''}>${d}</option>`).join('')}</select></div>
+    <div class="field"><label>Delivery areas</label>
+      <div class="chip-group" id="lfDeliveryChips">${DISTRICTS.map(d=>`<div class="chip-check ${(l?l.deliveryAreas:u.deliveryAreas||[u.district]).includes(d)?'on':''}" data-d="${d}" onclick="toggleDeliveryChip(this)">${d}</div>`).join('')}</div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="saveListing('${id||''}')">Publish Listing</button>
+  `);
+}
+function saveListing(id){
+  const u = currentUser();
+  const fileInput = document.getElementById('lfImage');
+  const finish = (imageData)=>{
+    const listings = DB.listings();
+    const areas = Array.from(document.querySelectorAll('#lfDeliveryChips .chip-check.on')).map(c=>c.dataset.d);
+    const payload = {
+      name: document.getElementById('lfName').value.trim(),
+      category: document.getElementById('lfCategory').value,
+      price: parseFloat(document.getElementById('lfPrice').value),
+      quantity: parseFloat(document.getElementById('lfQty').value),
+      description: document.getElementById('lfDesc').value.trim(),
+      district: document.getElementById('lfDistrict').value,
+      deliveryAreas: areas.length?areas:[u.district],
+      available:true,
+    };
+    if(imageData) payload.image = imageData;
+    if(id){
+      const idx = listings.findIndex(x=>x.id===id);
+      listings[idx] = {...listings[idx], ...payload};
+    } else {
+      listings.push({id:uid('l'), sellerId:u.id, image:'', ...payload});
+    }
+    DB.saveListings(listings);
+    closeModal();
+    toast('Listing published','ok');
+    render();
+  };
+  if(fileInput && fileInput.files && fileInput.files[0]){
+    const reader = new FileReader();
+    reader.onload = ()=>finish(reader.result);
+    reader.readAsDataURL(fileInput.files[0]);
+  } else finish(null);
+}
+
+/* ---------------- modal helpers ---------------- */
+function showModal(inner){
+  closeModal();
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay'; overlay.id='modalOverlay';
+  overlay.onclick = (e)=>{ if(e.target===overlay) closeModal(); };
+  overlay.innerHTML = `<div class="modal">${inner}</div>`;
+  document.body.appendChild(overlay);
+}
+function closeModal(){ const m=document.getElementById('modalOverlay'); if(m) m.remove(); }
+
+function wireGlobalUI(){
+  document.querySelectorAll('.navlinks a').forEach(a=>{
+    a.addEventListener('click', ()=>{ document.querySelector('.navlinks')?.classList.remove('open'); });
+  });
+}
+
+// expose functions used by inline handlers
+Object.assign(window, {navigate, doLogin, doRegister, setRegRole, toggleDeliveryChip, logout,
+  renderMarketGrid, openAddToCart, updateAddTotal, confirmAddToCart, openNegotiate, sendNegotiation,
+  updateCartQty, removeFromCart, openCheckout, placeOrder, advanceOrder, openConvo, sendChat,
+  respondOffer, promptCounter, sendCounter, openListingForm, saveListing, toggleAvailable, deleteListing,
+  saveProfile, closeModal, marketFilter});
+</script>
+</body>
+</html>
